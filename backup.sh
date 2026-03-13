@@ -39,8 +39,8 @@ die() {
 [[ -b "$SOURCE" ]] || die "Source device $SOURCE not found or is not a block device"
 [[ -b "$DEST"   ]] || die "Destination device $DEST not found. Is the backup SD card inserted?"
 
-SOURCE_BYTES=$(wc -c < "$SOURCE")
-DEST_BYTES=$(wc -c < "$DEST")
+SOURCE_BYTES=$(lsblk -bdn -o SIZE "$SOURCE")
+DEST_BYTES=$(lsblk -bdn -o SIZE "$DEST")
 SOURCE_GB=$(( SOURCE_BYTES / 1024 / 1024 / 1024 ))
 DEST_GB=$(( DEST_BYTES   / 1024 / 1024 / 1024 ))
 
