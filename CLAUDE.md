@@ -16,9 +16,12 @@ sudo bash backup.sh --dry-run
 sudo bash backup.sh
 ```
 
-Override devices or log path via environment variables:
+Override devices, log path, or log level via environment variables:
 ```bash
 sudo SOURCE_DEV=/dev/mmcblk0 DEST_DEV=/dev/sdb LOG_FILE=/var/log/pi-sd-backup.log bash backup.sh
+
+# Verbose output (default is errors only)
+sudo LOG_LEVEL=INFO bash backup.sh
 ```
 
 ## Scheduling with cron
@@ -34,3 +37,4 @@ Add to root's crontab (`sudo crontab -e`):
 - **`conv=noerror,sync`**: `noerror` prevents dd from aborting on read errors; `sync` pads bad blocks with zeroes so partition offsets stay correct.
 - **Size check**: Script aborts if the destination card is smaller than the source.
 - **Mounted destination guard**: Script aborts if any partition on `/dev/sdb` is already mounted, to prevent clobbering a live filesystem.
+- **Log level**: Controlled via `LOG_LEVEL` env var (`ERROR` by default, `INFO` for verbose). `error`/`die` always log; `info`/`warn` are suppressed at the default level.

@@ -10,6 +10,7 @@ set -euo pipefail
 SOURCE="${SOURCE_DEV:-/dev/mmcblk0}"
 DEST="${DEST_DEV:-/dev/sdb}"
 LOG_FILE="${LOG_FILE:-/var/log/pi-sd-backup.log}"
+LOG_LEVEL="${LOG_LEVEL:-ERROR}"  # ERROR | INFO
 BLOCK_SIZE="4M"
 DRY_RUN=false
 
@@ -23,8 +24,8 @@ log() {
     echo "$msg" | tee -a "$LOG_FILE"
 }
 
-info()  { log "INFO " "$@"; }
-warn()  { log "WARN " "$@"; }
+info()  { [[ "$LOG_LEVEL" == "INFO" ]] && log "INFO " "$@" || true; }
+warn()  { [[ "$LOG_LEVEL" == "INFO" ]] && log "WARN " "$@" || true; }
 error() { log "ERROR" "$@"; }
 
 die() {
