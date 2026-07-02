@@ -76,12 +76,18 @@ if [[ -n "$DEST_UUID" ]]; then
     info "Resolved DEST_UUID to $DEST"
 fi
 
-if [[ -n "$SOURCE_UUID" && -n "$DEST_UUID" && "$SOURCE" == "$DEST" ]]; then
-    die "SOURCE_UUID and DEST_UUID resolve to the same disk ($SOURCE). Aborting."
-fi
-
 [[ -b "$SOURCE" ]] || die "Source device $SOURCE not found or is not a block device"
 [[ -b "$DEST"   ]] || die "Destination device $DEST not found. Is the backup SD card inserted?"
+
+# Canonicalize to kernel names (e.g. /dev/disk/by-id/... → /dev/sdb) so the
+# mounted-partition guard (which matches /proc/mounts) and the size checks work
+# no matter how the device was specified — plain path, by-id symlink, or UUID.
+SOURCE=$(readlink -f "$SOURCE")
+DEST=$(readlink -f "$DEST")
+
+if [[ "$SOURCE" == "$DEST" ]]; then
+    die "Source and destination resolve to the same disk ($SOURCE). Aborting."
+fi
 
 SOURCE_BYTES=$(lsblk -bdn -o SIZE "$SOURCE")
 DEST_BYTES=$(lsblk -bdn -o SIZE "$DEST")

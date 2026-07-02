@@ -39,8 +39,8 @@ Override defaults via environment variables:
 | ------------- | --------------------------- | ---------------------------------------- |
 | `SOURCE_UUID` | *(unset)*                   | Pin source card by filesystem UUID       |
 | `DEST_UUID`   | *(unset)*                   | Pin destination card by filesystem UUID  |
-| `SOURCE_DEV`  | `/dev/mmcblk0`              | Device to copy from (used if no UUID)    |
-| `DEST_DEV`    | `/dev/sdb`                  | Device to copy to (used if no UUID)      |
+| `SOURCE_DEV`  | `/dev/mmcblk0`              | Device to copy from (path or by-id; used if no UUID) |
+| `DEST_DEV`    | `/dev/sdb`                  | Device to copy to (path or by-id; used if no UUID)   |
 | `ENV_FILE`    | `.env` beside the script    | Path to the config file to source        |
 | `LOG_FILE`    | `/var/log/pi-sd-backup.log` | Log destination                          |
 | `LOG_LEVEL`   | `ERROR`                     | `ERROR` (quiet) or `INFO` (verbose)      |
@@ -80,7 +80,23 @@ DEST_UUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 The script sources `.env` automatically (default: `.env` next to `backup.sh`;
 override with `ENV_FILE=/etc/pi-sd-backup.env`). A UUID always wins over the
-matching `*_DEV` name. If both UUIDs resolve to the same disk, the run aborts.
+matching `*_DEV` name. If source and destination resolve to the same disk, the
+run aborts.
+
+### Pin by hardware ID instead (`/dev/disk/by-id/`)
+
+`SOURCE_DEV` / `DEST_DEV` also accept a `/dev/disk/by-id/...` symlink — the
+script canonicalizes it to the real device (`/dev/sdb`) before every check, so
+all the safety guards still apply. List the available ids with `ls -l
+/dev/disk/by-id/`.
+
+Choose per your setup:
+
+- **Filesystem UUID** lives on the card, so it follows the card between
+  readers — but a blank or freshly reformatted card has no UUID to resolve.
+- **`by-id`** identifies the hardware, so it works even on a blank card — but
+  for a USB SD reader the id usually belongs to the *reader*, not the card, so
+  it changes if you swap readers.
 
 ## Scheduling with cron
 
