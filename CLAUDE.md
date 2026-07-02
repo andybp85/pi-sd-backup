@@ -24,6 +24,11 @@ sudo SOURCE_DEV=/dev/mmcblk0 DEST_DEV=/dev/sdb LOG_FILE=/var/log/pi-sd-backup.lo
 sudo LOG_LEVEL=INFO bash backup.sh
 ```
 
+Prefer pinning cards by filesystem UUID (`SOURCE_UUID` / `DEST_UUID`) over
+`/dev/sdb` names, which are not stable. Put real UUIDs in a gitignored `.env`
+on the Pi (see `.env.example`); the script sources it automatically. Never
+commit real UUIDs.
+
 ## Scheduling with cron
 
 Add to root's crontab (`sudo crontab -e`):
@@ -37,4 +42,5 @@ Add to root's crontab (`sudo crontab -e`):
 - **`conv=noerror,sync`**: `noerror` prevents dd from aborting on read errors; `sync` pads bad blocks with zeroes so partition offsets stay correct.
 - **Size check**: Script aborts if the destination card is smaller than the source.
 - **Mounted destination guard**: Script aborts if any partition on `/dev/sdb` is already mounted, to prevent clobbering a live filesystem.
+- **UUID pinning**: Optional `SOURCE_UUID` / `DEST_UUID` resolve (via `blkid` + `lsblk pkname`) to whole-disk devices at runtime, so unstable kernel names can't misdirect `dd`. UUID wins over the `*_DEV` name; the run aborts if both resolve to the same disk. Real UUIDs live in a gitignored `.env`, never the repo.
 - **Log level**: Controlled via `LOG_LEVEL` env var (`ERROR` by default, `INFO` for verbose). `error`/`die` always log; `info`/`warn` are suppressed at the default level.

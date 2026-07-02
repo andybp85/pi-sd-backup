@@ -1,0 +1,19 @@
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+
+# Tooling caches
+.memsearch/
+.firecrawl/
+
+# Local device config / secrets (real UUIDs live here, on the Pi only)
+.env
+!.env.example
+
+# Logs & backups
+*.log
+*.bak
+
+# OS cruft
+.DS_Store

@@ -7,8 +7,20 @@
 
 set -euo pipefail
 
+# Load optional config (device UUIDs, overrides) from an env file kept off the
+# repo. Defaults to a .env beside the script; override with ENV_FILE=/etc/....
+ENV_FILE="${ENV_FILE:-$(dirname "$0")/.env}"
+if [[ -f "$ENV_FILE" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+fi
+
 SOURCE="${SOURCE_DEV:-/dev/mmcblk0}"
 DEST="${DEST_DEV:-/dev/sdb}"
+SOURCE_UUID="${SOURCE_UUID:-}"   # optional: pin source by filesystem UUID
+DEST_UUID="${DEST_UUID:-}"       # optional: pin destination by filesystem UUID
 LOG_FILE="${LOG_FILE:-/var/log/pi-sd-backup.log}"
 LOG_LEVEL="${LOG_LEVEL:-ERROR}"  # ERROR | INFO
 BLOCK_SIZE="4M"
@@ -33,9 +45,40 @@ die() {
     exit 1
 }
 
+# ── Device resolution ───────────────────────────────────────────────────────────
+
+# Resolve a filesystem UUID to its whole-disk device (e.g. abc-123 → /dev/sdb).
+# Kernel names like /dev/sdb are not stable across reboots or re-plugs; a UUID
+# always points at the same card, so dd never writes to the wrong disk.
+resolve_disk() {
+    local uuid="$1" part parent
+    part=$(blkid -U "$uuid" 2>/dev/null) || return 1
+    [[ -n "$part" ]] || return 1
+    parent=$(lsblk -no pkname "$part" 2>/dev/null | head -n1)
+    if [[ -n "$parent" ]]; then
+        echo "/dev/$parent"
+    else
+        echo "$part"   # UUID is on a whole disk, not a partition
+    fi
+}
+
 # ── Pre-flight checks ──────────────────────────────────────────────────────────
 
 [[ $EUID -eq 0 ]] || die "Must be run as root (use: sudo $0)"
+
+# UUID (when provided) wins over device name — it is the stable identifier.
+if [[ -n "$SOURCE_UUID" ]]; then
+    SOURCE=$(resolve_disk "$SOURCE_UUID") || die "No block device found for SOURCE_UUID=$SOURCE_UUID"
+    info "Resolved SOURCE_UUID to $SOURCE"
+fi
+if [[ -n "$DEST_UUID" ]]; then
+    DEST=$(resolve_disk "$DEST_UUID") || die "No block device found for DEST_UUID=$DEST_UUID. Is the backup SD card inserted?"
+    info "Resolved DEST_UUID to $DEST"
+fi
+
+if [[ -n "$SOURCE_UUID" && -n "$DEST_UUID" && "$SOURCE" == "$DEST" ]]; then
+    die "SOURCE_UUID and DEST_UUID resolve to the same disk ($SOURCE). Aborting."
+fi
 
 [[ -b "$SOURCE" ]] || die "Source device $SOURCE not found or is not a block device"
 [[ -b "$DEST"   ]] || die "Destination device $DEST not found. Is the backup SD card inserted?"
@@ -52,11 +95,11 @@ if (( DEST_BYTES < SOURCE_BYTES )); then
     die "Destination (${DEST_GB} GB) is smaller than source (${SOURCE_GB} GB). Aborting."
 fi
 
-# Warn if destination has mounted partitions (e.g. sdb1, sdb2)
-if grep -qs "${DEST}" /proc/mounts; then
-    warn "One or more partitions on $DEST appear to be mounted:"
-    grep "${DEST}" /proc/mounts | while read -r line; do warn "  $line"; done
-    warn "Unmount them before running backup to avoid data corruption."
+# Abort if destination has mounted partitions (e.g. sdb1, sdb2)
+if grep -qsF "$DEST" /proc/mounts; then
+    error "One or more partitions on $DEST appear to be mounted:"
+    grep -F "$DEST" /proc/mounts | while read -r line; do error "  $line"; done
+    error "Unmount them before running backup to avoid data corruption."
     die "Aborting due to mounted destination partitions."
 fi
 
@@ -82,8 +125,8 @@ if dd if="$SOURCE" of="$DEST" bs="$BLOCK_SIZE" conv=noerror,sync status=progress
     END_TIME=$(date +%s)
     ELAPSED=$(( END_TIME - START_TIME ))
     MINUTES=$(( ELAPSED / 60 ))
-    SECONDS=$(( ELAPSED % 60 ))
-    info "Backup completed successfully in ${MINUTES}m ${SECONDS}s."
+    SECS=$(( ELAPSED % 60 ))
+    info "Backup completed successfully in ${MINUTES}m ${SECS}s."
 else
     die "dd exited with an error. Check $LOG_FILE for details."
 fi
