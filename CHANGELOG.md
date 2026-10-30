@@ -10,6 +10,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-30
+
 ### Changed
 
 - `backup.sh` is clean under shellcheck and formatted with shfmt; section rulers fit 140 columns.
@@ -36,5 +38,6 @@ interface stable.
 
 - Size check no longer hangs (uses `lsblk` instead of `wc -c`) and works under cron's minimal `PATH`.
 
-[Unreleased]: https://github.com/andybp85/pi-sd-backup/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/andybp85/pi-sd-backup/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/andybp85/pi-sd-backup/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/andybp85/pi-sd-backup/releases/tag/v1.0.0
