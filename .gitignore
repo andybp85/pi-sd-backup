@@ -1,11 +1,5 @@
-# Editors / IDEs
-.idea/
-.vscode/
-*.swp
-
-# Tooling caches
-.memsearch/
-.firecrawl/
+# Personal editor/tool artifacts (.idea/, .memsearch/, .DS_Store, ...) live in the
+# global ~/.config/git/ignore, not here.
 
 # Local device config / secrets (real UUIDs live here, on the Pi only)
 .env
@@ -14,6 +8,3 @@
 # Logs & backups
 *.log
 *.bak
-
-# OS cruft
-.DS_Store

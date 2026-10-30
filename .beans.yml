@@ -1,0 +1,6 @@
+beans:
+    path: .beans
+    prefix: pi-sd-backup-
+    id_length: 4
+    default_status: todo
+    default_type: task

@@ -35,15 +35,15 @@ sudo bash backup.sh
 
 Override defaults via environment variables:
 
-| Variable      | Default                     | Purpose                                  |
-| ------------- | --------------------------- | ---------------------------------------- |
-| `SOURCE_UUID` | *(unset)*                   | Pin source card by filesystem UUID       |
-| `DEST_UUID`   | *(unset)*                   | Pin destination card by filesystem UUID  |
+| Variable      | Default                     | Purpose                                              |
+| ------------- | --------------------------- | ---------------------------------------------------- |
+| `SOURCE_UUID` | *(unset)*                   | Pin source card by filesystem UUID                   |
+| `DEST_UUID`   | *(unset)*                   | Pin destination card by filesystem UUID              |
 | `SOURCE_DEV`  | `/dev/mmcblk0`              | Device to copy from (path or by-id; used if no UUID) |
 | `DEST_DEV`    | `/dev/sdb`                  | Device to copy to (path or by-id; used if no UUID)   |
-| `ENV_FILE`    | `.env` beside the script    | Path to the config file to source        |
-| `LOG_FILE`    | `/var/log/pi-sd-backup.log` | Log destination                          |
-| `LOG_LEVEL`   | `ERROR`                     | `ERROR` (quiet) or `INFO` (verbose)      |
+| `ENV_FILE`    | `.env` beside the script    | Path to the config file to source                    |
+| `LOG_FILE`    | `/var/log/pi-sd-backup.log` | Log destination                                      |
+| `LOG_LEVEL`   | `ERROR`                     | `ERROR` (quiet) or `INFO` (verbose)                  |
 
 ```bash
 sudo LOG_LEVEL=INFO DEST_DEV=/dev/sdc bash backup.sh
@@ -123,3 +123,7 @@ The script aborts before writing if any of these fail:
 - **Data loss risk.** `dd` overwrites the destination unconditionally. Double-
   check `DEST_DEV` — pointing it at the wrong disk destroys that disk.
 - The backup is crash-consistent, not clean (see *How it works*).
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). Versions are git tags (`vX.Y.Z`), following SemVer.

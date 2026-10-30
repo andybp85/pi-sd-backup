@@ -1,0 +1,52 @@
+{
+    // Keys are alphabetized per rules/objects.md, which puts the MD rules ahead of
+    // "default" — uppercase sorts first. Everything not named here is the tool's
+    // default, which the house style already agrees with.
+    "config": {
+        // "ATX headers (`#`), never Setext"
+        "MD003": { "style": "atx" },
+        // "`-` for unordered lists"
+        "MD004": { "style": "dash" },
+        // Tabs inside a fence are data — a Makefile recipe, a TSV sample — and
+        // --fix "fixing" them to spaces corrupts the sample it was protecting.
+        // Prose tabs still flag.
+        "MD010": { "code_blocks": false },
+        // Keep a Changelog repeats "### Added" under every release, so a changelog's
+        // second release trips the default. Duplicates under one parent still flag.
+        "MD024": { "siblings_only": true },
+        // "110-char line limit; exempt code blocks, tables, and unbreakable tokens".
+        // The last exemption needs no setting: MD013 already leaves a line alone when
+        // it has no break opportunity past the limit, which is the long-URL case.
+        "MD013": { "code_blocks": false, "line_length": 110, "tables": false },
+        // "`1.` lazy numbering for ordered (let the renderer count)"
+        "MD029": { "style": "one" },
+        // "fenced code blocks, always language-tagged; never indented blocks"
+        "MD046": { "style": "fenced" },
+        "default": true
+    },
+    // Agent-written stores. A .beans issue records what was said, not prose anyone
+    // rereads for style, and there are four figures of them across this machine —
+    // gating those would be gating the agent, not the docs. node_modules is here
+    // because a dependency's README is not this repo's writing. fixtures/ holds
+    // captured tool output under test — inline HTML and long lines ARE the data,
+    // and gating them once pushed an agent to --no-verify.
+    //
+    // .memsearch, .specstory, .superpowers, .venv, and .pytest_cache are the same
+    // argument one directory over: machine-local stores the repo does not write and
+    // does not track. Every glob is `**/`-anchored, node_modules included — a spike
+    // or a workspace package carries its own, and a bare `node_modules/**` reaches
+    // only the top one. The guard reads staged files and all of these are gitignored,
+    // so the gate was never what reached them — the `--fix '**/*.md'` this script
+    // prints below is, and on its first run it rewrote 56 files under .memsearch/
+    // and .superpowers/. Unversioned, so not undoable.
+    "ignores": [
+        "**/.memsearch/**",
+        "**/.pytest_cache/**",
+        "**/.specstory/**",
+        "**/.superpowers/**",
+        "**/.venv/**",
+        "**/fixtures/**",
+        "**/node_modules/**",
+        ".beans/**",
+    ]
+}

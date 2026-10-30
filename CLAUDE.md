@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-A bash script (`backup.sh`) that performs nightly live backups of a Raspberry Pi's SD card (`/dev/mmcblk0`) to a second SD card (`/dev/sdb`) using `dd`, without unmounting the source. The Pi must stay running during backup because it serves the home network.
+A bash script (`backup.sh`) that performs nightly live backups of a Raspberry Pi's SD card (`/dev/mmcblk0`)
+to a second SD card (`/dev/sdb`) using `dd`, without unmounting the source. The Pi must stay running during
+backup because it serves the home network.
 
 ## Running the script
 
@@ -17,6 +19,7 @@ sudo bash backup.sh
 ```
 
 Override devices, log path, or log level via environment variables:
+
 ```bash
 sudo SOURCE_DEV=/dev/mmcblk0 DEST_DEV=/dev/sdb LOG_FILE=/var/log/pi-sd-backup.log bash backup.sh
 
@@ -32,15 +35,26 @@ commit real UUIDs.
 ## Scheduling with cron
 
 Add to root's crontab (`sudo crontab -e`):
-```
+
+```text
 0 3 * * * /path/to/backup.sh >> /var/log/pi-sd-backup.log 2>&1
 ```
 
 ## Key design decisions
 
-- **Live copy**: The source is never unmounted. A `sync` is issued first to flush buffers, minimizing (but not eliminating) filesystem inconsistency. The backup card may need `fsck` on first boot — the Pi's kernel does this automatically.
-- **`conv=noerror,sync`**: `noerror` prevents dd from aborting on read errors; `sync` pads bad blocks with zeroes so partition offsets stay correct.
+- **Live copy**: The source is never unmounted. A `sync` is issued first to flush buffers, minimizing (but
+  not eliminating) filesystem inconsistency. The backup card may need `fsck` on first boot — the Pi's kernel
+  does this automatically.
+- **`conv=noerror,sync`**: `noerror` prevents dd from aborting on read errors; `sync` pads bad blocks with
+  zeroes so partition offsets stay correct.
 - **Size check**: Script aborts if the destination card is smaller than the source.
-- **Mounted destination guard**: Script aborts if any partition on `/dev/sdb` is already mounted, to prevent clobbering a live filesystem.
-- **Stable device identification**: Optional `SOURCE_UUID` / `DEST_UUID` resolve (via `blkid` + `lsblk pkname`) to whole-disk devices at runtime, so unstable kernel names can't misdirect `dd`; UUID wins over the `*_DEV` name. `*_DEV` also accepts a `/dev/disk/by-id/...` symlink. All forms are canonicalized with `readlink -f` to a kernel name before the guards run, so the mounted-partition check (which matches `/proc/mounts`) and size checks stay consistent. The run aborts if source and destination resolve to the same disk. Real UUIDs live in a gitignored `.env`, never the repo.
-- **Log level**: Controlled via `LOG_LEVEL` env var (`ERROR` by default, `INFO` for verbose). `error`/`die` always log; `info`/`warn` are suppressed at the default level.
+- **Mounted destination guard**: Script aborts if any partition on `/dev/sdb` is already mounted, to prevent
+  clobbering a live filesystem.
+- **Stable device identification**: Optional `SOURCE_UUID` / `DEST_UUID` resolve (via `blkid` +
+  `lsblk pkname`) to whole-disk devices at runtime, so unstable kernel names can't misdirect `dd`; UUID wins
+  over the `*_DEV` name. `*_DEV` also accepts a `/dev/disk/by-id/...` symlink. All forms are canonicalized
+  with `readlink -f` to a kernel name before the guards run, so the mounted-partition check (which matches
+  `/proc/mounts`) and size checks stay consistent. The run aborts if source and destination resolve to the
+  same disk. Real UUIDs live in a gitignored `.env`, never the repo.
+- **Log level**: Controlled via `LOG_LEVEL` env var (`ERROR` by default, `INFO` for verbose). `error`/`die`
+  always log; `info`/`warn` are suppressed at the default level.
