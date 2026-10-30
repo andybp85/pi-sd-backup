@@ -124,6 +124,16 @@ The script aborts before writing if any of these fail:
   check `DEST_DEV` — pointing it at the wrong disk destroys that disk.
 - The backup is crash-consistent, not clean (see *How it works*).
 
+## Development
+
+`backup.sh` is linted with [shellcheck](https://www.shellcheck.net/) and formatted with
+[shfmt](https://github.com/mvdan/sh). shfmt reads its style from `.editorconfig`, so pass no flags:
+
+```bash
+shellcheck backup.sh
+shfmt -d backup.sh
+```
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md). Versions are git tags (`vX.Y.Z`), following SemVer.

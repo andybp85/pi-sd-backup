@@ -10,6 +10,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+
+- `backup.sh` is clean under shellcheck and formatted with shfmt; section rulers fit 140 columns.
+  No change to flags, environment variables, output, or exit status.
+
 ## [1.0.0] - 2026-10-30
 
 First versioned release. The script runs nightly in production on the Pi; this release declares its

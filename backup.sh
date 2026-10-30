@@ -12,32 +12,34 @@ set -euo pipefail
 ENV_FILE="${ENV_FILE:-$(dirname "$0")/.env}"
 if [[ -f "$ENV_FILE" ]]; then
     set -a
-    # shellcheck disable=SC1090
+    # shellcheck disable=SC1090  # path is chosen at runtime; nothing static to follow
     source "$ENV_FILE"
     set +a
 fi
 
 SOURCE="${SOURCE_DEV:-/dev/mmcblk0}"
 DEST="${DEST_DEV:-/dev/sdb}"
-SOURCE_UUID="${SOURCE_UUID:-}"   # optional: pin source by filesystem UUID
-DEST_UUID="${DEST_UUID:-}"       # optional: pin destination by filesystem UUID
+SOURCE_UUID="${SOURCE_UUID:-}" # optional: pin source by filesystem UUID
+DEST_UUID="${DEST_UUID:-}"     # optional: pin destination by filesystem UUID
 LOG_FILE="${LOG_FILE:-/var/log/pi-sd-backup.log}"
-LOG_LEVEL="${LOG_LEVEL:-ERROR}"  # ERROR | INFO
+LOG_LEVEL="${LOG_LEVEL:-ERROR}" # ERROR | INFO
 BLOCK_SIZE="4M"
 DRY_RUN=false
 
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
 
-# ── Logging ────────────────────────────────────────────────────────────────────
+# ── Logging ───────────────────────────────────────
 
 log() {
-    local level="$1"; shift
-    local msg="[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $*"
+    local level="$1"
+    shift
+    local msg
+    msg="[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $*"
     echo "$msg" | tee -a "$LOG_FILE"
 }
 
-info()  { [[ "$LOG_LEVEL" == "INFO" ]] && log "INFO " "$@" || true; }
-warn()  { [[ "$LOG_LEVEL" == "INFO" ]] && log "WARN " "$@" || true; }
+info() { [[ "$LOG_LEVEL" == "INFO" ]] && log "INFO " "$@" || true; }
+warn() { [[ "$LOG_LEVEL" == "INFO" ]] && log "WARN " "$@" || true; }
 error() { log "ERROR" "$@"; }
 
 die() {
@@ -45,7 +47,7 @@ die() {
     exit 1
 }
 
-# ── Device resolution ───────────────────────────────────────────────────────────
+# ── Device resolution ─────────────────────────────
 
 # Resolve a filesystem UUID to its whole-disk device (e.g. abc-123 → /dev/sdb).
 # Kernel names like /dev/sdb are not stable across reboots or re-plugs; a UUID
@@ -58,11 +60,11 @@ resolve_disk() {
     if [[ -n "$parent" ]]; then
         echo "/dev/$parent"
     else
-        echo "$part"   # UUID is on a whole disk, not a partition
+        echo "$part" # UUID is on a whole disk, not a partition
     fi
 }
 
-# ── Pre-flight checks ──────────────────────────────────────────────────────────
+# ── Pre-flight checks ─────────────────────────────
 
 [[ $EUID -eq 0 ]] || die "Must be run as root (use: sudo $0)"
 
@@ -77,7 +79,7 @@ if [[ -n "$DEST_UUID" ]]; then
 fi
 
 [[ -b "$SOURCE" ]] || die "Source device $SOURCE not found or is not a block device"
-[[ -b "$DEST"   ]] || die "Destination device $DEST not found. Is the backup SD card inserted?"
+[[ -b "$DEST" ]] || die "Destination device $DEST not found. Is the backup SD card inserted?"
 
 # Canonicalize to kernel names (e.g. /dev/disk/by-id/... → /dev/sdb) so the
 # mounted-partition guard (which matches /proc/mounts) and the size checks work
@@ -91,13 +93,13 @@ fi
 
 SOURCE_BYTES=$(lsblk -bdn -o SIZE "$SOURCE")
 DEST_BYTES=$(lsblk -bdn -o SIZE "$DEST")
-SOURCE_GB=$(( SOURCE_BYTES / 1024 / 1024 / 1024 ))
-DEST_GB=$(( DEST_BYTES   / 1024 / 1024 / 1024 ))
+SOURCE_GB=$((SOURCE_BYTES / 1024 / 1024 / 1024))
+DEST_GB=$((DEST_BYTES / 1024 / 1024 / 1024))
 
 info "Source : $SOURCE (${SOURCE_GB} GB)"
 info "Dest   : $DEST   (${DEST_GB} GB)"
 
-if (( DEST_BYTES < SOURCE_BYTES )); then
+if ((DEST_BYTES < SOURCE_BYTES)); then
     die "Destination (${DEST_GB} GB) is smaller than source (${SOURCE_GB} GB). Aborting."
 fi
 
@@ -109,7 +111,7 @@ if grep -qsF "$DEST" /proc/mounts; then
     die "Aborting due to mounted destination partitions."
 fi
 
-# ── Backup ─────────────────────────────────────────────────────────────────────
+# ── Backup ────────────────────────────────────────
 
 info "Flushing filesystem buffers (sync)..."
 sync
@@ -129,9 +131,9 @@ START_TIME=$(date +%s)
 if dd if="$SOURCE" of="$DEST" bs="$BLOCK_SIZE" conv=noerror,sync status=progress 2>&1 | tee -a "$LOG_FILE"; then
     sync
     END_TIME=$(date +%s)
-    ELAPSED=$(( END_TIME - START_TIME ))
-    MINUTES=$(( ELAPSED / 60 ))
-    SECS=$(( ELAPSED % 60 ))
+    ELAPSED=$((END_TIME - START_TIME))
+    MINUTES=$((ELAPSED / 60))
+    SECS=$((ELAPSED % 60))
     info "Backup completed successfully in ${MINUTES}m ${SECS}s."
 else
     die "dd exited with an error. Check $LOG_FILE for details."
