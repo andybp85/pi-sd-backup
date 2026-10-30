@@ -14,3 +14,9 @@ max_line_length = 110
 
 [*.{yml,yaml}]
 indent_size = 2
+
+[*.{sh,bash}]
+indent_style = space
+indent_size = 4
+switch_case_indent = true
+binary_next_line = true

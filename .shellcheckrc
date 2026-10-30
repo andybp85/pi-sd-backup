@@ -1,0 +1,4 @@
+# Opt-in marker for the lint guard (~/.claude/tooling/lint-guard.sh). shfmt's style lives
+# in .editorconfig's [*.{sh,bash}] section.
+external-sources=true
+source-path=SCRIPTDIR
