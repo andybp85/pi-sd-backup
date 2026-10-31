@@ -49,7 +49,12 @@ Add to root's crontab (`sudo crontab -e`):
   zeroes so partition offsets stay correct.
 - **Block size divides the source**: `lib/block_size.sh` picks the largest power-of-two block (≤ 4 MiB) that
   divides the source size. A fixed 4M failed on a 31914983424-byte card: `sync` padded the last partial read
-  past the end of the destination (ENOSPC, exit 1). Tests: `bash tests/block_size_test.sh`.
+  past the end of the destination (ENOSPC, exit 1). Tests: `for t in tests/*_test.sh; do bash "$t"; done`.
+- **Optional write limit**: `DEST_WRITE_LIMIT` runs dd under `systemd-run --scope` with
+  `IOWriteBandwidthMax` on the destination and `oflag=direct` (`lib/dd_command.sh`). It exists because an
+  uncapped dd on tv-dsp.home (Pi 3B+, one USB host) stalled the UR23 USB SPDIF receiver on the same hub. A
+  kernel without `CONFIG_BLK_DEV_THROTTLING` ignores the property silently (pi.home's 32-bit 6.12 kernel
+  does), so a preflight probes the scope for `io.max` and aborts instead of running uncapped.
 - **Size check**: Script aborts if the destination card is smaller than the source.
 - **Mounted destination guard**: Script aborts if any partition on `/dev/sdb` is already mounted, to prevent
   clobbering a live filesystem.

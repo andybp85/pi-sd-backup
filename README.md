@@ -40,19 +40,42 @@ sudo bash backup.sh
 
 Override defaults via environment variables:
 
-| Variable      | Default                     | Purpose                                              |
-| ------------- | --------------------------- | ---------------------------------------------------- |
-| `SOURCE_UUID` | *(unset)*                   | Pin source card by filesystem UUID                   |
-| `DEST_UUID`   | *(unset)*                   | Pin destination card by filesystem UUID              |
-| `SOURCE_DEV`  | `/dev/mmcblk0`              | Device to copy from (path or by-id; used if no UUID) |
-| `DEST_DEV`    | `/dev/sdb`                  | Device to copy to (path or by-id; used if no UUID)   |
-| `ENV_FILE`    | `.env` beside the script    | Path to the config file to source                    |
-| `LOG_FILE`    | `/var/log/pi-sd-backup.log` | Log destination                                      |
-| `LOG_LEVEL`   | `ERROR`                     | `ERROR` (quiet) or `INFO` (verbose)                  |
+| Variable           | Default                     | Purpose                                              |
+| ------------------ | --------------------------- | ---------------------------------------------------- |
+| `SOURCE_UUID`      | *(unset)*                   | Pin source card by filesystem UUID                   |
+| `DEST_UUID`        | *(unset)*                   | Pin destination card by filesystem UUID              |
+| `SOURCE_DEV`       | `/dev/mmcblk0`              | Device to copy from (path or by-id; used if no UUID) |
+| `DEST_DEV`         | `/dev/sdb`                  | Device to copy to (path or by-id; used if no UUID)   |
+| `DEST_WRITE_LIMIT` | *(unset)*                   | Cap writes to the destination, bytes/s (e.g. `8M`)   |
+| `ENV_FILE`         | `.env` beside the script    | Path to the config file to source                    |
+| `LOG_FILE`         | `/var/log/pi-sd-backup.log` | Log destination                                      |
+| `LOG_LEVEL`        | `ERROR`                     | `ERROR` (quiet) or `INFO` (verbose)                  |
 
 ```bash
 sudo LOG_LEVEL=INFO DEST_DEV=/dev/sdc bash backup.sh
 ```
+
+### Limit the write rate (shared USB bus)
+
+On a Raspberry Pi 3B+, all USB ports and the Ethernet port share one USB
+host controller. An uncapped `dd` to a USB card reader can starve other USB
+devices on that bus. On one Pi, it stopped a USB audio receiver, and the
+receiver needed a USB port reset to recover.
+
+Set `DEST_WRITE_LIMIT` to cap the write rate, in bytes per second. The value
+uses systemd suffixes, and `M` is 1,000,000. For example, `8M` copies a 32 GB
+card in about 66 minutes:
+
+```bash
+DEST_WRITE_LIMIT=8M
+```
+
+When the limit is set, `dd` runs in a transient systemd scope with
+`IOWriteBandwidthMax` on the destination, and writes with `oflag=direct`.
+The kernel must have `CONFIG_BLK_DEV_THROTTLING`. Without it, systemd ignores
+the limit, so the script checks for the cgroup `io.max` file first and aborts
+if it is missing. Raspberry Pi OS 64-bit kernels have the option; the 32-bit
+6.12 kernel does not.
 
 ### Pin devices by UUID (recommended)
 
@@ -134,7 +157,7 @@ The script aborts before writing if any of these fail:
 Tests are plain bash. Run them with:
 
 ```bash
-bash tests/block_size_test.sh
+for t in tests/*_test.sh; do bash "$t"; done
 ```
 
 The shell files are linted with [shellcheck](https://www.shellcheck.net/) and formatted with

@@ -10,6 +10,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- `DEST_WRITE_LIMIT` caps the write rate to the destination (bytes/s, for example `8M`). Use it when other
+  USB devices share the bus. The script aborts if the kernel cannot apply the limit.
+
 ### Fixed
 
 - `dd` no longer exits with an error ("No space left on device") when the source card size is not a multiple

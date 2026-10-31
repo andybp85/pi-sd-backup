@@ -20,13 +20,16 @@ fi
 
 # shellcheck source=lib/block_size.sh
 source "$SCRIPT_DIR/lib/block_size.sh"
+# shellcheck source=lib/dd_command.sh
+source "$SCRIPT_DIR/lib/dd_command.sh"
 
 SOURCE="${SOURCE_DEV:-/dev/mmcblk0}"
 DEST="${DEST_DEV:-/dev/sdb}"
 SOURCE_UUID="${SOURCE_UUID:-}" # optional: pin source by filesystem UUID
 DEST_UUID="${DEST_UUID:-}"     # optional: pin destination by filesystem UUID
 LOG_FILE="${LOG_FILE:-/var/log/pi-sd-backup.log}"
-LOG_LEVEL="${LOG_LEVEL:-ERROR}" # ERROR | INFO
+LOG_LEVEL="${LOG_LEVEL:-ERROR}"          # ERROR | INFO
+DEST_WRITE_LIMIT="${DEST_WRITE_LIMIT:-}" # optional: cap dd writes, bytes/s (e.g. 8M)
 DRY_RUN=false
 
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
@@ -107,6 +110,17 @@ if ((DEST_BYTES < SOURCE_BYTES)); then
 fi
 
 BLOCK_SIZE=$(block_size_for "$SOURCE_BYTES") || die "Source size $SOURCE_BYTES bytes is not a multiple of 512. Aborting."
+mapfile -t DD_CMD < <(dd_command "$SOURCE" "$DEST" "$BLOCK_SIZE" "$DEST_WRITE_LIMIT")
+
+# A kernel without CONFIG_BLK_DEV_THROTTLING accepts IOWriteBandwidthMax and
+# ignores it, so a configured limit could silently do nothing. Probe a scope
+# for the io.max file the limit lives in, and refuse to run uncapped.
+if [[ -n "$DEST_WRITE_LIMIT" ]]; then
+    # shellcheck disable=SC2016  # $(...) must expand inside the scope, not here
+    systemd-run --scope --quiet "--property=IOWriteBandwidthMax=$DEST $DEST_WRITE_LIMIT" \
+        sh -c 'test -e "/sys/fs/cgroup$(cut -d: -f3 /proc/self/cgroup)/io.max"' \
+        || die "DEST_WRITE_LIMIT is set, but this kernel cannot throttle block I/O (no cgroup io.max). Aborting."
+fi
 
 # Abort if destination has mounted partitions (e.g. sdb1, sdb2)
 if grep -qsF "$DEST" /proc/mounts; then
@@ -123,17 +137,17 @@ sync
 
 if $DRY_RUN; then
     info "DRY RUN — would execute:"
-    info "  dd if=$SOURCE of=$DEST bs=$BLOCK_SIZE conv=noerror,sync status=progress"
+    info "  ${DD_CMD[*]}"
     info "Dry run complete. No data written."
     exit 0
 fi
 
-info "Starting backup: $SOURCE → $DEST (block size: $BLOCK_SIZE)"
+info "Starting backup: $SOURCE → $DEST (block size: $BLOCK_SIZE, write limit: ${DEST_WRITE_LIMIT:-none})"
 info "This will take several minutes. Do not remove either card."
 
 START_TIME=$(date +%s)
 
-if dd if="$SOURCE" of="$DEST" bs="$BLOCK_SIZE" conv=noerror,sync status=progress 2>&1 | tee -a "$LOG_FILE"; then
+if "${DD_CMD[@]}" 2>&1 | tee -a "$LOG_FILE"; then
     sync
     END_TIME=$(date +%s)
     ELAPSED=$((END_TIME - START_TIME))
