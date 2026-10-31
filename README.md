@@ -11,6 +11,11 @@ destination device (`/dev/sdb`). A `sync` flushes buffers first to minimize
 filesystem inconsistency; the copy uses `conv=noerror,sync` so read errors
 don't abort the run and partition offsets stay aligned.
 
+The block size is the largest power of two, up to 4 MiB, that divides the
+source card's size. `conv=sync` pads a short final read to a full block. If
+the block size does not divide the card, that padding goes past the end of
+the destination and `dd` fails with "No space left on device".
+
 Because the source stays mounted, the backup is a *crash-consistent* snapshot,
 not a clean one. The backup card may need an `fsck` on first boot — the Pi's
 kernel runs this automatically.
@@ -126,12 +131,18 @@ The script aborts before writing if any of these fail:
 
 ## Development
 
-`backup.sh` is linted with [shellcheck](https://www.shellcheck.net/) and formatted with
+Tests are plain bash. Run them with:
+
+```bash
+bash tests/block_size_test.sh
+```
+
+The shell files are linted with [shellcheck](https://www.shellcheck.net/) and formatted with
 [shfmt](https://github.com/mvdan/sh). shfmt reads its style from `.editorconfig`, so pass no flags:
 
 ```bash
-shellcheck backup.sh
-shfmt -d backup.sh
+shellcheck -x backup.sh lib/*.sh tests/*.sh
+shfmt -d backup.sh lib/*.sh tests/*.sh
 ```
 
 ## Changelog

@@ -10,6 +10,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- `dd` no longer exits with an error ("No space left on device") when the source card size is not a multiple
+  of 4 MiB. The block size is now the largest power of two, up to 4 MiB, that divides the source size, so
+  `conv=sync` padding never writes past the end of the destination.
+
 ## [1.0.1] - 2026-10-30
 
 ### Changed

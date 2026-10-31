@@ -47,6 +47,9 @@ Add to root's crontab (`sudo crontab -e`):
   does this automatically.
 - **`conv=noerror,sync`**: `noerror` prevents dd from aborting on read errors; `sync` pads bad blocks with
   zeroes so partition offsets stay correct.
+- **Block size divides the source**: `lib/block_size.sh` picks the largest power-of-two block (≤ 4 MiB) that
+  divides the source size. A fixed 4M failed on a 31914983424-byte card: `sync` padded the last partial read
+  past the end of the destination (ENOSPC, exit 1). Tests: `bash tests/block_size_test.sh`.
 - **Size check**: Script aborts if the destination card is smaller than the source.
 - **Mounted destination guard**: Script aborts if any partition on `/dev/sdb` is already mounted, to prevent
   clobbering a live filesystem.

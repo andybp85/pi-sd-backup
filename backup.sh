@@ -9,7 +9,8 @@ set -euo pipefail
 
 # Load optional config (device UUIDs, overrides) from an env file kept off the
 # repo. Defaults to a .env beside the script; override with ENV_FILE=/etc/....
-ENV_FILE="${ENV_FILE:-$(dirname "$0")/.env}"
+SCRIPT_DIR="$(dirname "$0")"
+ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/.env}"
 if [[ -f "$ENV_FILE" ]]; then
     set -a
     # shellcheck disable=SC1090  # path is chosen at runtime; nothing static to follow
@@ -17,13 +18,15 @@ if [[ -f "$ENV_FILE" ]]; then
     set +a
 fi
 
+# shellcheck source=lib/block_size.sh
+source "$SCRIPT_DIR/lib/block_size.sh"
+
 SOURCE="${SOURCE_DEV:-/dev/mmcblk0}"
 DEST="${DEST_DEV:-/dev/sdb}"
 SOURCE_UUID="${SOURCE_UUID:-}" # optional: pin source by filesystem UUID
 DEST_UUID="${DEST_UUID:-}"     # optional: pin destination by filesystem UUID
 LOG_FILE="${LOG_FILE:-/var/log/pi-sd-backup.log}"
 LOG_LEVEL="${LOG_LEVEL:-ERROR}" # ERROR | INFO
-BLOCK_SIZE="4M"
 DRY_RUN=false
 
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
@@ -102,6 +105,8 @@ info "Dest   : $DEST   (${DEST_GB} GB)"
 if ((DEST_BYTES < SOURCE_BYTES)); then
     die "Destination (${DEST_GB} GB) is smaller than source (${SOURCE_GB} GB). Aborting."
 fi
+
+BLOCK_SIZE=$(block_size_for "$SOURCE_BYTES") || die "Source size $SOURCE_BYTES bytes is not a multiple of 512. Aborting."
 
 # Abort if destination has mounted partitions (e.g. sdb1, sdb2)
 if grep -qsF "$DEST" /proc/mounts; then
